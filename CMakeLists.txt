@@ -10,6 +10,10 @@ include_directories(PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 include_directories(PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
 include_directories(PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/tests)
 
+add_executable(bench_rand tests/bench_rand.cpp)
+add_executable(bench_desc tests/bench_desc.cpp)
+add_executable(bench_asc tests/bench_asc.cpp)
+
 add_executable(test_rand tests/test_rand.cpp)
 add_executable(test_desc tests/test_desc.cpp)
 add_executable(test_asc tests/test_asc.cpp)

@@ -83,7 +83,37 @@ struct Treap : public basic_tree<Treap<value_t>, Treap_node<value_t>, value_t> {
     }
 
     void walk_impl() {
-        return this->_walk_impl();
+        static std::function<std::string(node_t *)> F = [](node_t *now) -> std::string {
+            std::stringstream ss;
+            ss << now->val;
+            ss << "(" << (now->rank) << ")";
+            std::string ret;
+            ss >> ret;
+            return ret;
+        };
+        return this->_walk_impl(std::make_optional(F));
+    }
+
+    inline bool test_treap() {
+        if (this->head->R == this->NIL)return true;
+        bool ok = true;
+        std::function<void(node_t *)> dfs = [&](node_t *now) {
+            if (!ok)return;
+            if (now->L != this->NIL) {
+                if (now->L->rank < now->rank)ok = false;
+                dfs(now->L);
+            }
+            if (now->R != this->NIL) {
+                if (now->R->rank < now->rank)ok = false;
+                dfs(now->R);
+            }
+        };
+        dfs(this->head->R);
+        return ok;
+    }
+
+    bool test_impl() {
+        return this->test_bst() && test_treap();
     }
 };
 

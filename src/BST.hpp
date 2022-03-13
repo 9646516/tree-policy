@@ -11,8 +11,8 @@ template<typename value_t>
 struct BST : public basic_tree<BST<value_t>, BST_node<value_t>, value_t> {
     using node_t = BST_node<value_t>;
 
-    node_t *insert_impl(const value_t &val) {
-        return this->_insert_impl(val);
+    void insert_impl(const value_t &val) {
+        this->_insert_impl(val);
     }
 
     void erase_impl(const value_t &val) {
@@ -25,6 +25,10 @@ struct BST : public basic_tree<BST<value_t>, BST_node<value_t>, value_t> {
 
     void walk_impl() {
         return this->_walk_impl();
+    }
+
+    bool test_impl() {
+        return this->test_bst();
     }
 };
 

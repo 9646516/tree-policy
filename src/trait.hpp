@@ -26,8 +26,20 @@ struct basic_tree_trait {
     }
 
     void walk() {
-        return static_cast<tree_t *>(this)->walk_impl();
+        static_cast<tree_t *>(this)->walk_impl();
+    }
+
+    int calc_height() {
+        return static_cast<tree_t *>(this)->calc_height_impl();
+    }
+
+    bool test() {
+        return static_cast<tree_t *>(this)->test_impl();
     }
 };
 
+enum class COLOR : uint8_t {
+    RED = 1,
+    BLACK = 2
+};
 #endif

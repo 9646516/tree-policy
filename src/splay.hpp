@@ -89,6 +89,10 @@ struct Splay : public basic_tree<Splay<value_t>, Splay_node<value_t>, value_t> {
     void walk_impl() {
         return this->_walk_impl();
     }
+
+    bool test_impl() {
+        return this->test_bst();
+    }
 };
 
 #endif

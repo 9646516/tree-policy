@@ -1,11 +1,36 @@
 #ifndef TREE_POLICY_BASIC_TREE_HPP
 #define TREE_POLICY_BASIC_TREE_HPP
 
+#include <sstream>
 #include <deque>
 #include "trait.hpp"
+#include <optional>
+#include <functional>
+
+struct erase_return_tag {
+};
+
+struct rb_tree_tag : erase_return_tag {
+};
+
+struct default_tag : erase_return_tag {
+};
+
 
 template<typename tree_t, typename node_t, typename value_t>
 struct basic_tree : public basic_tree_trait<tree_t, node_t, value_t> {
+
+    template<typename T>
+    struct erase_return_type;
+
+    template<>
+    struct erase_return_type<default_tag> {
+        using type = node_t *;
+    };
+    template<>
+    struct erase_return_type<rb_tree_tag> {
+        using type = std::pair<node_t *, COLOR>;
+    };
 
     node_t *head;
     node_t *NIL;
@@ -64,23 +89,24 @@ struct basic_tree : public basic_tree_trait<tree_t, node_t, value_t> {
     }
 
 
-    void _walk_impl() {
+    void _walk_impl(std::optional<std::function<std::string(node_t *)>> F = std::nullopt) {
         if (this->head->R == this->NIL) {
             std::cout << "NULL Tree" << std::endl;
         } else {
             static char sb[1000][1000];
             std::memset(sb, ' ', sizeof(sb));
-            std::function<void(int, int, int)> write = [&](int val, int x, int y) {
-                std::vector<int> bit;
-                while (val) {
-                    int p = val % 10;
-                    bit.push_back(p);
-                    val /= 10;
+            std::function<void(node_t *, int, int)> write = [&](node_t *now, int x, int y) {
+                std::string str;
+                if (F.has_value()) {
+                    str = F.value()(now);
+                } else {
+                    std::stringstream ss;
+                    ss << now->val;
+                    ss >> str;
                 }
-                std::reverse(bit.begin(), bit.end());
-                if (bit.empty())bit.push_back(0);
-                for (int i = 0; i < (int) bit.size(); i++) {
-                    sb[x][y + i] = (char) ('0' + bit[i]);
+
+                for (int i = 0; i < (int) str.size(); i++) {
+                    sb[x][y + i] = str[i];
                 }
             };
             std::function<void(const char *, int, int)> write_str = [&](const char *val, int x, int y) {
@@ -90,11 +116,11 @@ struct basic_tree : public basic_tree_trait<tree_t, node_t, value_t> {
                 }
             };
             std::function<int(node_t *, int, int)> dfs = [&](node_t *now, int x, int y) -> int {
-                if (now == NIL) {
+                if (now == this->NIL) {
                     write_str("NIL", x, y);
                     return 1;
                 }
-                write(now->val, x, y);
+                write(now, x, y);
                 sb[x + 1][y] = '|';
                 for (int i = 0; i < 5; i++) {
                     sb[x + 1][y + 1 + i] = '-';
@@ -173,9 +199,15 @@ struct basic_tree : public basic_tree_trait<tree_t, node_t, value_t> {
         return add;
     }
 
-    node_t *_erase_impl(const value_t &val) {
+    template<class tag=default_tag>
+    typename erase_return_type<tag>::type _erase_impl(const value_t &val) {
         auto *to_remove = this->find(val);
         node_t *ret = this->NIL;
+        COLOR origin_color;
+        if constexpr(std::is_same_v<tag, rb_tree_tag>) {
+            origin_color = to_remove->color;
+        }
+
         if (to_remove != this->NIL) {
             auto *&fa_link_bind = (to_remove->fa->L == to_remove) ? to_remove->fa->L : to_remove->fa->R;
 
@@ -184,13 +216,19 @@ struct basic_tree : public basic_tree_trait<tree_t, node_t, value_t> {
                 fa_link_bind = this->NIL;
             } else if (to_remove->L != this->NIL && to_remove->R != this->NIL) {
                 node_t *next = this->find_minimum_in_sub_tree(to_remove->R);
-                ret = next->fa;
-                if (ret == to_remove) {
-                    ret = ret->fa;
-                }
-                next->L = to_remove->L;
-                to_remove->L->fa = next;
-                if (next != to_remove->R) {
+                if (next == to_remove->R) {
+                    ret = next;
+
+                    next->L = to_remove->L;
+                    to_remove->L->fa = next;
+                    next->fa = to_remove->fa;
+                    fa_link_bind = next;
+                } else {
+                    ret = next->fa;
+
+                    next->L = to_remove->L;
+                    to_remove->L->fa = next;
+
                     node_t *R = next->R;
 
                     next->R = to_remove->R;
@@ -198,10 +236,10 @@ struct basic_tree : public basic_tree_trait<tree_t, node_t, value_t> {
 
                     next->fa->L = R;
                     R->fa = next->fa;
-                }
-                next->fa = to_remove->fa;
-                fa_link_bind = next;
 
+                    next->fa = to_remove->fa;
+                    fa_link_bind = next;
+                }
             } else if (to_remove->L != this->NIL) {
                 ret = to_remove->fa;
                 to_remove->L->fa = to_remove->fa;
@@ -213,7 +251,11 @@ struct basic_tree : public basic_tree_trait<tree_t, node_t, value_t> {
             }
             delete to_remove;
         }
-        return ret;
+        if constexpr(std::is_same_v<tag, rb_tree_tag>) {
+            return {ret, origin_color};
+        } else {
+            return ret;
+        }
     }
 
     ///          4                                   2
@@ -256,6 +298,49 @@ struct basic_tree : public basic_tree_trait<tree_t, node_t, value_t> {
         }
         right->fa = fa;
         return right;
+    }
+
+    inline bool test_bst() {
+        if (this->head->R == this->NIL)return true;
+        bool ok = true;
+        std::function<std::pair<value_t, value_t>(node_t *)> dfs = [&](node_t *now) -> std::pair<value_t, value_t> {
+            if (!ok)return {0, 0};
+            else if (now->L == this->NIL && now->R == this->NIL) {
+                return {now->val, now->val};
+            } else if (now->L == this->NIL) {
+                auto[rmin, rmax]= dfs(now->R);
+                if (now->val > rmin) {
+                    ok = false;
+                }
+                return {now->val, rmax};
+            } else if (now->R == this->NIL) {
+                auto[lmin, lmax]= dfs(now->L);
+                if (now->val < lmax) {
+                    ok = false;
+                }
+                return {lmin, now->val};
+            } else {
+                auto[lmin, lmax] = dfs(now->L);
+                auto[rmin, rmax]= dfs(now->R);
+                if (!(lmax <= now->val && now->val <= rmin)) {
+                    ok = false;
+                }
+                return {lmin, rmax};
+            }
+        };
+        dfs(this->head->R);
+        return ok;
+    }
+
+    int calc_height_impl() {
+        std::function<int(node_t *)> dfs = [&](node_t *now) -> int {
+            if (now == this->NIL) {
+                return 0;
+            } else {
+                return std::max(dfs(now->L), dfs(now->R)) + 1;
+            }
+        };
+        return dfs(this->head->R);
     }
 };
 

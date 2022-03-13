@@ -67,7 +67,7 @@ struct AVL : public basic_tree<AVL<value_t>, AVL_node<value_t>, value_t> {
         node_t *R = now->R;
         int l_height = get_height(R->L);
         int r_height = get_height(R->R);
-        if (l_height < r_height) {
+        if (l_height <= r_height) {
             return RR(now);
         } else {
             return RL(now);
@@ -100,7 +100,7 @@ struct AVL : public basic_tree<AVL<value_t>, AVL_node<value_t>, value_t> {
             int r = get_height(now->R);
             int dst = std::max(l, r) + 1;
             int o = l - r;
-            if (now->height == dst && o >= -1 && o <= 1) {
+            if (now->height == dst && (o == -1 || o == 1 || o == 0)) {
                 break;
             }
             now->height = dst;
@@ -120,10 +120,57 @@ struct AVL : public basic_tree<AVL<value_t>, AVL_node<value_t>, value_t> {
     }
 
     void erase_impl(const value_t &val) {
-        node_t *beg = this->_erase_impl(val);
-        if (beg == this->NIL)return;
-        push_up(beg);
-        rebuild_after_remove(beg);
+        auto *to_remove = this->find(val);
+        node_t *ret = this->NIL;
+        if (to_remove != this->NIL) {
+            auto *&fa_link_bind = (to_remove->fa->L == to_remove) ? to_remove->fa->L : to_remove->fa->R;
+
+            if (to_remove->L == this->NIL && to_remove->R == this->NIL) {
+                ret = to_remove->fa;
+                fa_link_bind = this->NIL;
+            } else if (to_remove->L != this->NIL && to_remove->R != this->NIL) {
+                node_t *next = this->find_minimum_in_sub_tree(to_remove->R);
+                if (next == to_remove->R) {
+                    ret = next;
+
+                    next->height = to_remove->height;
+                    next->L = to_remove->L;
+                    to_remove->L->fa = next;
+                    next->fa = to_remove->fa;
+                    fa_link_bind = next;
+                } else {
+                    ret = next->fa;
+
+                    next->height = to_remove->height;
+
+                    next->L = to_remove->L;
+                    to_remove->L->fa = next;
+
+                    node_t *R = next->R;
+
+                    next->R = to_remove->R;
+                    to_remove->R->fa = next;
+
+                    next->fa->L = R;
+                    R->fa = next->fa;
+
+                    next->fa = to_remove->fa;
+                    fa_link_bind = next;
+                }
+            } else if (to_remove->L != this->NIL) {
+                ret = to_remove->fa;
+                to_remove->L->fa = to_remove->fa;
+                fa_link_bind = to_remove->L;
+            } else {
+                ret = to_remove->fa;
+                to_remove->R->fa = to_remove->fa;
+                fa_link_bind = to_remove->R;
+            }
+            delete to_remove;
+        }
+        if (ret != this->NIL) {
+            rebuild_after_remove(ret);
+        }
     }
 
     node_t *find_impl(const value_t &val) {
@@ -131,7 +178,41 @@ struct AVL : public basic_tree<AVL<value_t>, AVL_node<value_t>, value_t> {
     }
 
     void walk_impl() {
-        return this->_walk_impl();
+        static std::function<std::string(node_t *)> F = [](node_t *now) -> std::string {
+            std::stringstream ss;
+            ss << now->val;
+            ss << "(" << now->height << ")";
+            std::string ret;
+            ss >> ret;
+            return ret;
+        };
+        return this->_walk_impl(std::make_optional(F));
+    }
+
+    inline bool test_avl() {
+        if (this->head->R == this->NIL)return true;
+        bool ok = true;
+        std::function<int32_t(node_t *)> dfs = [&](node_t *now) -> int32_t {
+            if (now->L == this->NIL && now->R == this->NIL) {
+                return 1;
+            } else {
+                int left_height = (now->L == this->NIL ? 0 : dfs(now->L));
+                int right_height = (now->R == this->NIL ? 0 : dfs(now->R));
+                int o = left_height - right_height;
+                if (o < -1 || o > 1) {
+                    std::cout << now->val << ' ' << now->L->val << ' ' << now->R->val << std::endl;
+                    std::cout << left_height << ' ' << right_height << std::endl;
+                    ok = false;
+                }
+                return std::max(left_height, right_height) + 1;
+            }
+        };
+        dfs(this->head->R);
+        return ok;
+    }
+
+    bool test_impl() {
+        return this->test_bst() && test_avl();
     }
 };
 

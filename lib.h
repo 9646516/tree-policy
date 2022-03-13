@@ -6,5 +6,6 @@
 #include "BST.hpp"
 #include "AVL.hpp"
 #include "treap.hpp"
+#include "rbtree.hpp"
 
 #endif
