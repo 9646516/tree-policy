@@ -15,7 +15,7 @@ static const int TEST = 10;
 static std::mutex mutex;
 
 template<typename T>
-static void test_tree(const char *sb, const std::vector<int> &V) {
+static void test_tree(const char *sb, const std::vector<int> &V, const std::vector<int> &V2) {
     constexpr bool is_set = std::is_same_v<std::set<int>, std::decay_t<T>> ||
                             std::is_same_v<std::unordered_set<int>, std::decay_t<T>> ||
                             std::is_same_v<std::multiset<int>, std::decay_t<T>> ||
@@ -37,17 +37,13 @@ static void test_tree(const char *sb, const std::vector<int> &V) {
         {
             auto start = std::chrono::high_resolution_clock::now();
             for (const int i: V) {
-                auto res = x->find(i);
                 if constexpr(is_set) {
-                    if (*res != i) {
-                        std::cout << "bad" << std::endl;
+                    if (*x->find(i) != i) {
+                        std::cout << "?" << std::endl;
                     }
                 } else {
-                    if (res->val != i) {
-                        std::cout << "bad" << std::endl;
-                    }
+                    volatile auto res = x->find(i);
                 }
-
             }
             auto end = std::chrono::high_resolution_clock::now();
             sum_find += (end - start) / 1us;
@@ -59,7 +55,7 @@ static void test_tree(const char *sb, const std::vector<int> &V) {
         }
         {
             auto start = std::chrono::high_resolution_clock::now();
-            for (const int &i: V) {
+            for (const int &i: V2) {
                 x->erase(i);
             }
             auto end = std::chrono::high_resolution_clock::now();
@@ -76,16 +72,17 @@ static void test_tree(const char *sb, const std::vector<int> &V) {
     std::cout << std::endl;
 }
 
-void bench(const std::vector<int> &V) {
+void bench(const std::vector<int> &V, const std::vector<int> &V2) {
     std::cout.precision(3);
     std::cout << std::fixed;
     std::thread thread[]{
-            std::thread(test_tree<std::multiset<int>>, "std::multiset", V),
-            std::thread(test_tree<BST<int>>, "bst", V),
-            std::thread(test_tree<Treap<int>>, "treap", V),
-            std::thread(test_tree<AVL<int>>, "avl", V),
-            std::thread(test_tree<Splay<int>>, "splay", V),
-            std::thread(test_tree<RBTree<int>>, "rb tree", V),
+            std::thread(test_tree<std::multiset<int>>, "std::multiset", V, V2),
+            std::thread(test_tree<BST<int>>, "bst", V, V2),
+            std::thread(test_tree<Treap<int>>, "treap", V, V2),
+            std::thread(test_tree<AVL<int>>, "avl", V, V2),
+            std::thread(test_tree<Splay<int>>, "splay", V, V2),
+            std::thread(test_tree<RBTree<int>>, "rb tree", V, V2),
+            std::thread(test_tree<BTree<int>>, "2-3-4 tree", V, V2),
     };
     for (auto &i: thread) {
         i.join();

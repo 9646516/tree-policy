@@ -9,6 +9,6 @@ int main() {
     for (int i = 0; i < N; i++) {
         V.push_back(N - i);
     }
-    bench(V);
+    bench(V, V);
     return 0;
 }

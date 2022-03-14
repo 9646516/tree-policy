@@ -7,5 +7,6 @@
 #include "AVL.hpp"
 #include "treap.hpp"
 #include "rbtree.hpp"
+#include "btree.hpp"
 
 #endif

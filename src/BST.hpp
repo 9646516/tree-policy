@@ -4,7 +4,7 @@
 #include "basic_tree.hpp"
 
 template<typename value_t>
-struct BST_node : public basic_node_trait<BST_node<value_t>, value_t> {
+struct BST_node : public basic_node<BST_node<value_t>, value_t> {
 };
 
 template<typename value_t>

@@ -11,12 +11,15 @@ int main() {
 #else
     const int seed = 114514;
 #endif
-    std::vector<int> V;
+    std::vector<int> V, V2;
     std::mt19937 rng(seed);
     V.reserve(N);
     for (int i = 0; i < N; i++) {
-        V.push_back((int) rng());
+        V.push_back(i);
     }
-    bench(V);
+    V2.assign(V.begin(), V.end());
+    std::shuffle(V.begin(), V.end(), rng);
+    std::shuffle(V2.begin(), V2.end(), rng);
+    bench(V, V2);
     return 0;
 }

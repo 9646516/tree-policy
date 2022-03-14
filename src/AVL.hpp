@@ -6,7 +6,7 @@
 
 #define get_height(x) (x==this->NIL?0:x->height)
 template<typename value_t>
-struct AVL_node : public basic_node_trait<AVL_node<value_t>, value_t> {
+struct AVL_node : public basic_node<AVL_node<value_t>, value_t> {
     int height;
 };
 

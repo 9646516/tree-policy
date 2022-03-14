@@ -6,7 +6,7 @@
 #include "trait.hpp"
 
 template<typename value_t>
-struct RBTree_node : public basic_node_trait<RBTree_node<value_t>, value_t> {
+struct RBTree_node : public basic_node<RBTree_node<value_t>, value_t> {
     COLOR color;
 };
 

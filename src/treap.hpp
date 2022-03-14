@@ -6,7 +6,7 @@
 #include <random>
 
 template<typename value_t>
-struct Treap_node : public basic_node_trait<Treap_node<value_t>, value_t> {
+struct Treap_node : public basic_node<Treap_node<value_t>, value_t> {
     uint32_t rank;
 
     Treap_node() {

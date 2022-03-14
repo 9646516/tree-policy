@@ -7,33 +7,16 @@
 #include <optional>
 #include <functional>
 
-struct erase_return_tag {
+template<typename node_t, typename value_t>
+struct basic_node {
+    node_t *L, *R, *fa;
+    value_t val;
 };
-
-struct rb_tree_tag : erase_return_tag {
-};
-
-struct default_tag : erase_return_tag {
-};
-
 
 template<typename tree_t, typename node_t, typename value_t>
-struct basic_tree : public basic_tree_trait<tree_t, node_t, value_t> {
-
-    template<typename T>
-    struct erase_return_type;
-
-    template<>
-    struct erase_return_type<default_tag> {
-        using type = node_t *;
-    };
-    template<>
-    struct erase_return_type<rb_tree_tag> {
-        using type = std::pair<node_t *, COLOR>;
-    };
+struct basic_tree : public tree_trait<tree_t, node_t, value_t> {
 
     node_t *head;
-    node_t *NIL;
 
     node_t *create_node(const value_t &val = 0) {
         auto *ret = new node_t();
@@ -54,13 +37,13 @@ struct basic_tree : public basic_tree_trait<tree_t, node_t, value_t> {
 
     ~basic_tree() {
         std::function<void(node_t *)> dfs = [&](node_t *now) {
-            if (now == NIL)return;
-            if (now->L != NIL)dfs(now->L);
-            if (now->R != NIL)dfs(now->R);
+            if (now == this->NIL)return;
+            if (now->L != this->NIL)dfs(now->L);
+            if (now->R != this->NIL)dfs(now->R);
             delete now;
         };
         dfs(head->R);
-        delete NIL;
+        delete this->NIL;
         delete head;
     }
 
@@ -199,14 +182,9 @@ struct basic_tree : public basic_tree_trait<tree_t, node_t, value_t> {
         return add;
     }
 
-    template<class tag=default_tag>
-    typename erase_return_type<tag>::type _erase_impl(const value_t &val) {
+    node_t *_erase_impl(const value_t &val) {
         auto *to_remove = this->find(val);
         node_t *ret = this->NIL;
-        COLOR origin_color;
-        if constexpr(std::is_same_v<tag, rb_tree_tag>) {
-            origin_color = to_remove->color;
-        }
 
         if (to_remove != this->NIL) {
             auto *&fa_link_bind = (to_remove->fa->L == to_remove) ? to_remove->fa->L : to_remove->fa->R;
@@ -251,11 +229,7 @@ struct basic_tree : public basic_tree_trait<tree_t, node_t, value_t> {
             }
             delete to_remove;
         }
-        if constexpr(std::is_same_v<tag, rb_tree_tag>) {
-            return {ret, origin_color};
-        } else {
-            return ret;
-        }
+        return ret;
     }
 
     ///          4                                   2
